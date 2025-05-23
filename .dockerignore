@@ -1,0 +1,53 @@
+# .dockerignore para Rick and Morty API
+
+# Directorios de build
+target/
+build/
+out/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# Gradle
+.gradle/
+gradle/wrapper/
+
+# Node modules (si tienes frontend)
+node_modules/
+npm-debug.log*
+
+# Test files
+src/test/
