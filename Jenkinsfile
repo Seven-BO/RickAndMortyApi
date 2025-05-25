@@ -117,7 +117,7 @@ pipeline {
                             ${DOCKER_IMAGE}:${DOCKER_TAG}
                     """
 
-                    echo "✅ Contenedor desplegado: ${CONTAINER_NAME}"
+                    echo "✅ Contenedor desplegado: ${CONTAINER_NAME} (puerto ${APP_PORT} mapeado al host)"
                 }
             }
         }
@@ -133,7 +133,11 @@ pipeline {
                             script {
                                 def responseCode = "000"
                                 def curlErrorOutput = ""
-                                def targetUrl = "http://${CONTAINER_NAME}:${APP_PORT}/character"
+
+                                def dockerHostIp = sh(script: "ip route show | grep default | awk '{print \$3}'", returnStdout: true).trim()
+                                def targetUrl = "http://${dockerHostIp}:${APP_PORT}/character"
+
+                                echo "Intentando conectar a la aplicación en el host Docker: ${targetUrl}"
 
                                 try {
                                     responseCode = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${targetUrl}", returnStdout: true).trim()
@@ -142,7 +146,7 @@ pipeline {
                                 } catch (Exception e) {
                                     echo "Error durante el Health Check (conexión o curl falló): ${e.getMessage()}"
                                     try {
-                                        curlErrorOutput = sh(script: "curl ${targetUrl}", returnStdout: true, returnStderr: true, quiet: true)
+                                        curlErrorOutput = sh(script: "curl ${targetUrl}", returnStdout: true, returnStderr: true)
                                         echo "Salida detallada de curl (si hubo un error de conexión):\n${curlErrorOutput}"
                                     } catch (Exception innerE) {
                                         echo "Curl diagnóstico también falló: ${innerE.getMessage()}"
@@ -170,9 +174,11 @@ pipeline {
             steps {
                 echo '📊 Ejecutando tests post-despliegue...'
                 script {
-                    def targetUrl = "http://${CONTAINER_NAME}:${APP_PORT}/character"
+                    def dockerHostIp = sh(script: "ip route show | grep default | awk '{print \$3}'", returnStdout: true).trim()
+                    def targetUrl = "http://${dockerHostIp}:${APP_PORT}/character"
+
+                    echo "Testing application endpoints at: ${targetUrl}"
                     sh """
-                        echo "Testing application endpoints..."
                         curl -f ${targetUrl} || exit 1
                         echo "✅ Endpoint /character working"
                     """
