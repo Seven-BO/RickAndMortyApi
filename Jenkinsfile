@@ -58,7 +58,7 @@ pipeline {
             steps {
                 echo '🔍 Ejecutando análisis estático con SonarQube...'
                 script {
-                    withSonarQubeEnv('SonarQube') { // Nombre de tu servidor SonarQube en Jenkins
+                    withSonarQubeEnv('SonarQube') {
                         sh """
                             mvn sonar:sonar \
                                 -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
@@ -156,7 +156,7 @@ pipeline {
                             --name ${CONTAINER_NAME} \
                             --restart unless-stopped \
                             -p ${APP_PORT}:${APP_PORT} \
-                            -e SPRING_PROFILES_ACTIVE=production \
+                            -e SPRING_PROFILES_ACTIVE=dev \
                             -e JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseContainerSupport" \
                             --network host \
                             ${DOCKER_IMAGE}:${DOCKER_TAG}
