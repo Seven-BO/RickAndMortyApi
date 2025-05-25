@@ -44,6 +44,10 @@ pipeline {
             steps {
                 echo '🧹 Limpiando y construyendo aplicación...'
                 sh 'mvn clean install -DskipTests'
+
+                echo 'Verificando los JARs generados en target/...'
+                sh 'ls -lh target/'
+                sh 'file target/RickAndMorty-v1.jar'
             }
         }
 

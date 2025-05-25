@@ -21,11 +21,20 @@ COPY src ./src
 # Construir la aplicación
 RUN mvn clean package -DskipTests
 
+# Muestra el contenido del directorio target/ para verificar el JAR generado
+RUN echo "--- DEBUG: Contenido de /app/target/ en la etapa de build ---" && ls -lh /app/target/
+# Intenta ejecutar el JAR para ver si es un ejecutable de Spring Boot (puede fallar si no es un JAR final)
+RUN echo "--- DEBUG: Probando si RickAndMorty-v1.jar es directamente ejecutable en la etapa de build ---" && \
+    java -jar /app/target/RickAndMorty-v1.jar --help || echo "DEBUG: El JAR no es directamente ejecutable en la etapa de build, esto es normal si es el JAR original antes de repackage."
+
+
 # Etapa 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 
 # Instalar curl para healthchecks
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl \
+    # Instalar unzip para depuración del JAR
+    && apk add --no-cache unzip
 
 # Crear usuario no privilegiado para seguridad
 RUN addgroup -g 1001 -S rickmorty && \
@@ -34,8 +43,15 @@ RUN addgroup -g 1001 -S rickmorty && \
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar el JAR generado desde la etapa de build
-COPY --from=build /app/target/RickAndMorty-v1.jar rick-morty-api.jar
+# Copiar el JAR generado desde la etapa de build con su nombre exacto
+# Según tu pom.xml, el JAR se llama 'RickAndMorty-v1.jar'
+COPY --from=build /app/target/RickAndMorty-v1.0.jar rick-morty-api.jar
+
+# Muestra el contenido del directorio de trabajo después de copiar el JAR
+RUN echo "--- DEBUG: Contenido de /app/ en la etapa de runtime después de COPY ---" && ls -lh /app/
+# Descomprime el JAR y busca la clase principal para confirmar que está allí
+RUN echo "--- DEBUG: Verificando el contenido del JAR copiado (buscando RickAndMortyApplication.class) ---" && \
+    unzip -l rick-morty-api.jar | grep "RickAndMortyApplication.class" || echo "DEBUG: Clase RickAndMortyApplication.class NO encontrada en el JAR."
 
 # Cambiar propietario del archivo
 RUN chown rickmorty:rickmorty rick-morty-api.jar
