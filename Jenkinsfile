@@ -58,13 +58,13 @@ pipeline {
                 script {
                     withSonarQubeEnv('SonarQube') {
                         sh """
-                            mvn sonar:sonar \
-                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                -Dsonar.projectName='${SONAR_PROJECT_NAME}' \
-                                -Dsonar.projectVersion=${ARTIFACT_VERSION}-${BUILD_NUMBER} \
-                                -Dsonar.sources=src/main/java \
-                                -Dsonar.tests=src/test/java \
-                                -Dsonar.java.binaries=target/classes \
+                            mvn sonar:sonar \\
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \\
+                                -Dsonar.projectName='${SONAR_PROJECT_NAME}' \\
+                                -Dsonar.projectVersion=${ARTIFACT_VERSION}-${BUILD_NUMBER} \\
+                                -Dsonar.sources=src/main/java \\
+                                -Dsonar.tests=src/test/java \\
+                                -Dsonar.java.binaries=target/classes \\
                                 -Dsonar.junit.reportPaths=target/surefire-reports
                         """
                     }
@@ -109,13 +109,13 @@ pipeline {
                     """
 
                     sh """
-                        docker run -d \
-                            --name ${CONTAINER_NAME} \
-                            --restart unless-stopped \
-                            -p ${APP_PORT}:${APP_PORT} \
-                            -e SPRING_PROFILES_ACTIVE=dev \
-                            -e JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseContainerSupport" \
-                            --network host \
+                        docker run -d \\
+                            --name ${CONTAINER_NAME} \\
+                            --restart unless-stopped \\
+                            -p ${APP_PORT}:${APP_PORT} \\
+                            -e SPRING_PROFILES_ACTIVE=dev \\
+                            -e JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseContainerSupport" \\
+                            --network host \\
                             ${DOCKER_IMAGE}:${DOCKER_TAG}
                     """
 
@@ -131,11 +131,13 @@ pipeline {
                     timeout(time: 2, unit: 'MINUTES') {
                         waitUntil {
                             script {
-                                try {
-                                    sh "curl -f http://localhost:${APP_PORT}/character"
+                                def responseCode = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT}/character", returnStdout: true).trim()
+                                echo "Intento de Health Check: Código de estado HTTP = ${responseCode}"
+
+                                if (responseCode == '200') {
                                     return true
-                                } catch (Exception e) {
-                                    echo "⏳ Esperando que la aplicación esté lista..."
+                                } else {
+                                    echo "⏳ Aplicación no lista (HTTP ${responseCode}). Reintentando en 10 segundos..."
                                     sleep 10
                                     return false
                                 }
