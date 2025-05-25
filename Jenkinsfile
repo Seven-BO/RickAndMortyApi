@@ -47,7 +47,7 @@ pipeline {
 
                 echo 'Verificando los JARs generados en target/...'
                 sh 'ls -lh target/'
-                sh 'file target/RickAndMorty-v1.jar'
+//                 sh 'file target/RickAndMorty-v1.jar'
             }
         }
 
