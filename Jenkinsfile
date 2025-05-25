@@ -128,13 +128,31 @@ pipeline {
             steps {
                 echo '🏥 Verificando salud de la aplicación...'
                 script {
+                    sleep 15
+
                     timeout(time: 2, unit: 'MINUTES') {
                         waitUntil {
                             script {
-                                def responseCode = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT}/character", returnStdout: true).trim()
-                                echo "Intento de Health Check: Código de estado HTTP = ${responseCode}"
+                                def responseCode = "000"
+                                def curlErrorOutput = ""
+
+                                try {
+                                    responseCode = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT}/character", returnStdout: true).trim()
+                                    echo "Intento de Health Check: Código de estado HTTP = ${responseCode}"
+
+                                } catch (Exception e) {
+                                    echo "Error durante el Health Check (conexión o curl falló): ${e.getMessage()}"
+                                    try {
+                                        curlErrorOutput = sh(script: "curl http://localhost:${APP_PORT}/character", returnStdout: true, returnStderr: true, quiet: true)
+                                        echo "Salida detallada de curl (si hubo un error de conexión):\n${curlErrorOutput}"
+                                    } catch (Exception innerE) {
+                                        echo "Curl diagnóstico también falló: ${innerE.getMessage()}"
+                                    }
+                                    responseCode = "000"
+                                }
 
                                 if (responseCode == '200') {
+                                    echo "✅ Aplicación lista (HTTP 200 OK)."
                                     return true
                                 } else {
                                     echo "⏳ Aplicación no lista (HTTP ${responseCode}). Reintentando en 10 segundos..."
