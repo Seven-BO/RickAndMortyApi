@@ -74,7 +74,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
-					<mainClass>com.rockgustavo.RickAndMorty.RickAndMortyApplication</mainClass>
+					<mainClass>com.rockgustavo.RickAndMortyApplication</mainClass>
 					<executable>true</executable>
 				</configuration>
 				<executions>
