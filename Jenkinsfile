@@ -104,9 +104,8 @@ pipeline {
             steps {
                 echo '🚀 Desplegando contenedor Docker...'
                 script {
-                    sh """
-                        docker images ${DOCKER_IMAGE} --format "table {{.Tag}}" | grep -v TAG | grep '^[0-9]' | sort -nr | tail -n +4 | xargs -r -I {} docker rmi ${DOCKER_IMAGE}:{} || true
-                    """
+                    sh "docker stop ${CONTAINER_NAME} || true"
+                    sh "docker rm ${CONTAINER_NAME} || true"
 
                     sh """
                         docker run -d \\
@@ -115,7 +114,6 @@ pipeline {
                             -p ${APP_PORT}:${APP_PORT} \\
                             -e SPRING_PROFILES_ACTIVE=dev \\
                             -e JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseContainerSupport" \\
-                            --network host \\
                             ${DOCKER_IMAGE}:${DOCKER_TAG}
                     """
 
@@ -135,15 +133,16 @@ pipeline {
                             script {
                                 def responseCode = "000"
                                 def curlErrorOutput = ""
+                                def targetUrl = "http://${CONTAINER_NAME}:${APP_PORT}/character"
 
                                 try {
-                                    responseCode = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT}/character", returnStdout: true).trim()
-                                    echo "Intento de Health Check: Código de estado HTTP = ${responseCode}"
+                                    responseCode = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${targetUrl}", returnStdout: true).trim()
+                                    echo "Intento de Health Check: Código de estado HTTP = ${responseCode} para ${targetUrl}"
 
                                 } catch (Exception e) {
                                     echo "Error durante el Health Check (conexión o curl falló): ${e.getMessage()}"
                                     try {
-                                        curlErrorOutput = sh(script: "curl http://localhost:${APP_PORT}/character", returnStdout: true, returnStderr: true, quiet: true)
+                                        curlErrorOutput = sh(script: "curl ${targetUrl}", returnStdout: true, returnStderr: true, quiet: true)
                                         echo "Salida detallada de curl (si hubo un error de conexión):\n${curlErrorOutput}"
                                     } catch (Exception innerE) {
                                         echo "Curl diagnóstico también falló: ${innerE.getMessage()}"
@@ -171,9 +170,10 @@ pipeline {
             steps {
                 echo '📊 Ejecutando tests post-despliegue...'
                 script {
+                    def targetUrl = "http://${CONTAINER_NAME}:${APP_PORT}/character"
                     sh """
                         echo "Testing application endpoints..."
-                        curl -f http://localhost:${APP_PORT}/character || exit 1
+                        curl -f ${targetUrl} || exit 1
                         echo "✅ Endpoint /character working"
                     """
                 }
