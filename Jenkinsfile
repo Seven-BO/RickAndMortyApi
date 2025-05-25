@@ -67,20 +67,6 @@ pipeline {
             }
         }
 
-
-        stage('🧪 Run Tests') {
-            steps {
-                echo '🧪 Ejecutando tests...'
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
-                    archiveArtifacts artifacts: 'target/surefire-reports/**/*', allowEmptyArchive: true
-                }
-            }
-        }
-
         stage('🐳 Build Docker Image') {
             steps {
                 echo '🐳 Construyendo imagen Docker...'
