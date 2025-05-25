@@ -35,7 +35,7 @@ RUN addgroup -g 1001 -S rickmorty && \
 WORKDIR /app
 
 # Copiar el JAR generado desde la etapa de build
-COPY --from=build /app/target/*.jar rick-morty-api.jar
+COPY --from=build /app/target/RickAndMorty-v1.jar rick-morty-api.jar
 
 # Cambiar propietario del archivo
 RUN chown rickmorty:rickmorty rick-morty-api.jar
