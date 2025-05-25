@@ -133,11 +133,32 @@ pipeline {
                             script {
                                 def responseCode = "000"
                                 def curlErrorOutput = ""
+                                def dockerHostIp = ""
 
-                                def dockerHostIp = sh(script: "ip route show | grep default | awk '{print \$3}'", returnStdout: true).trim()
+                                echo "Intentando determinar la IP del host Docker..."
+                                try {
+                                    def ipRouteOutput = sh(script: "ip route show", returnStdout: true).trim()
+                                    echo "Salida de 'ip route show':\n${ipRouteOutput}"
+                                    dockerHostIp = sh(script: "echo \"${ipRouteOutput}\" | grep default | awk '{print \$3}'", returnStdout: true).trim()
+                                    echo "IP del host Docker (desde ip route show): ${dockerHostIp}"
+                                } catch (Exception e) {
+                                    echo "Error al obtener IP del host con 'ip route show': ${e.getMessage()}"
+                                }
+
+                                if (dockerHostIp == "") {
+                                    echo "IP del host Docker no encontrada con 'ip route show'. Intentando con 'host.docker.internal'..."
+                                    try {
+                                        dockerHostIp = sh(script: "getent hosts host.docker.internal | awk '{ print \$1 }'", returnStdout: true).trim()
+                                        echo "IP del host Docker (desde host.docker.internal): ${dockerHostIp}"
+                                    } catch (Exception e) {
+                                        echo "Error al obtener IP del host con 'host.docker.internal': ${e.getMessage()}"
+                                        echo "Usando IP de fallback común para Docker bridge: 172.17.0.1"
+                                        dockerHostIp = "172.17.0.1" // Fallback a una IP común del bridge de Docker
+                                    }
+                                }
+
                                 def targetUrl = "http://${dockerHostIp}:${APP_PORT}/character"
-
-                                echo "Intentando conectar a la aplicación en el host Docker: ${targetUrl}"
+                                echo "Intentando conectar a la aplicación en: ${targetUrl}"
 
                                 try {
                                     responseCode = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${targetUrl}", returnStdout: true).trim()
@@ -146,7 +167,8 @@ pipeline {
                                 } catch (Exception e) {
                                     echo "Error durante el Health Check (conexión o curl falló): ${e.getMessage()}"
                                     try {
-                                        curlErrorOutput = sh(script: "curl ${targetUrl}", returnStdout: true, returnStderr: true)
+                                        // Eliminado 'returnStderr' para evitar el warning
+                                        curlErrorOutput = sh(script: "curl ${targetUrl}", returnStdout: true)
                                         echo "Salida detallada de curl (si hubo un error de conexión):\n${curlErrorOutput}"
                                     } catch (Exception innerE) {
                                         echo "Curl diagnóstico también falló: ${innerE.getMessage()}"
@@ -174,7 +196,17 @@ pipeline {
             steps {
                 echo '📊 Ejecutando tests post-despliegue...'
                 script {
-                    def dockerHostIp = sh(script: "ip route show | grep default | awk '{print \$3}'", returnStdout: true).trim()
+                    def dockerHostIp = ""
+                    try {
+                        dockerHostIp = sh(script: "ip route show | grep default | awk '{print \$3}'", returnStdout: true).trim()
+                    } catch (Exception e) {
+                        echo "Error al obtener IP del host para Post-Deploy Tests: ${e.getMessage()}"
+                        try {
+                            dockerHostIp = sh(script: "getent hosts host.docker.internal | awk '{ print \$1 }'", returnStdout: true).trim()
+                        } catch (Exception e2) {
+                            dockerHostIp = "172.17.0.1"
+                        }
+                    }
                     def targetUrl = "http://${dockerHostIp}:${APP_PORT}/character"
 
                     echo "Testing application endpoints at: ${targetUrl}"
