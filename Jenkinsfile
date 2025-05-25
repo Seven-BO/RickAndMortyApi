@@ -40,17 +40,10 @@ pipeline {
             }
         }
 
-        stage('🧹 Clean Workspace') {
+        stage('🧹 Clean and Build Application') {
             steps {
-                echo '🧹 Limpiando workspace...'
-                sh 'mvn clean'
-            }
-        }
-
-        stage('📦 Install Dependencies') {
-            steps {
-                echo '📦 Instalando dependencias...'
-                sh 'mvn dependency:resolve'
+                echo '🧹 Limpiando y construyendo aplicación...'
+                sh 'mvn clean install -DskipTests'
             }
         }
 
@@ -89,15 +82,6 @@ pipeline {
             }
         }
 
-        stage('🔨 Build Application') {
-            steps {
-                echo '🔨 Construyendo aplicación...'
-                sh 'mvn package -DskipTests'
-
-                archiveArtifacts artifacts: 'target/RickAndMorty-v1.jar', fingerprint: true
-            }
-        }
-
         stage('🧪 Run Tests') {
             steps {
                 echo '🧪 Ejecutando tests...'
@@ -106,7 +90,6 @@ pipeline {
             post {
                 always {
                     publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
-
                     archiveArtifacts artifacts: 'target/surefire-reports/**/*', allowEmptyArchive: true
                 }
             }
