@@ -43,7 +43,7 @@ pipeline {
         stage('🧹 Clean and Build Application') {
             steps {
                 echo '🧹 Limpiando y construyendo aplicación...'
-                sh 'mvn clean install -DskipTests'
+                sh 'mvn clean package install -DskipTests'
 
                 echo 'Verificando los JARs generados en target/...'
                 sh 'ls -lh target/'
