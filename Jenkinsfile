@@ -25,14 +25,8 @@ pipeline {
                 checkout scm
 
                 script {
-                    env.GIT_COMMIT_MSG = sh(
-                        script: 'git log -1 --pretty=%B',
-                        returnStdout: true
-                    ).trim()
-                    env.GIT_AUTHOR = sh(
-                        script: 'git log -1 --pretty=%an',
-                        returnStdout: true
-                    ).trim()
+                    env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    env.GIT_AUTHOR = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
                 }
 
                 echo "📝 Commit: ${env.GIT_COMMIT_MSG}"
@@ -45,9 +39,16 @@ pipeline {
                 echo '🧹 Limpiando y construyendo aplicación...'
                 sh 'mvn clean package install -DskipTests'
 
-                echo 'Verificando los JARs generados en target/...'
-                sh 'ls -lh target/'
-//                 sh 'file target/RickAndMorty-v1.jar'
+                echo '🎯 Renombrando JAR generado a app.jar'
+                sh '''
+                    JAR_PATH=$(find target -name "*.jar" | grep -v "original" | head -n 1)
+                    echo "JAR encontrado: $JAR_PATH"
+                    mv "$JAR_PATH" target/app.jar
+                '''
+
+                echo '📦 Verificando contenido del JAR'
+                sh 'jar tf target/app.jar | grep Application || true'
+                sh 'unzip -p target/app.jar META-INF/MANIFEST.MF | grep Main || true'
             }
         }
 
@@ -75,13 +76,10 @@ pipeline {
             steps {
                 echo '🐳 Construyendo imagen Docker...'
                 script {
-                    sh """
-                        docker stop ${CONTAINER_NAME} || true
-                        docker rm ${CONTAINER_NAME} || true
-                    """
+                    sh "docker stop ${CONTAINER_NAME} || true"
+                    sh "docker rm ${CONTAINER_NAME} || true"
 
                     def dockerImage = docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
-
                     sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
 
                     echo "✅ Imagen construida: ${DOCKER_IMAGE}:${DOCKER_TAG}"
@@ -166,7 +164,6 @@ pipeline {
     post {
         always {
             echo '🧹 Limpieza post-pipeline...'
-
             cleanWs()
 
             script {
@@ -184,7 +181,6 @@ pipeline {
 
         failure {
             echo '❌ Pipeline falló!'
-
             script {
                 try {
                     sh "docker stop ${CONTAINER_NAME} || true"
