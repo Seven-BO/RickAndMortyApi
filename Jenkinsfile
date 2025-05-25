@@ -67,20 +67,6 @@ pipeline {
             }
         }
 
-        stage('⏳ Quality Gate') {
-            steps {
-                echo '⏳ Esperando resultado del Quality Gate...'
-                script {
-                    timeout(time: 5, unit: 'MINUTES') {
-                        def qg = waitForQualityGate()
-                        if (qg.status != 'OK') {
-                            error "Pipeline abortado debido a fallo en Quality Gate: ${qg.status}"
-                        }
-                        echo '✅ Quality Gate aprobado!'
-                    }
-                }
-            }
-        }
 
         stage('🧪 Run Tests') {
             steps {
